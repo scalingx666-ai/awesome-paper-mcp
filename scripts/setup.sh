@@ -117,16 +117,20 @@ log "Installing the gateway (paper-mcp console script)"
 uv pip install -q -e . --no-deps
 
 # --- smoke test -------------------------------------------------------------
+# A stdio MCP server exits as soon as its stdin reaches EOF, so the requests
+# must be followed by a held-open stdin. The sleep covers every backend starting
+# up on a cold run; on a warm re-run the responses arrive in seconds and the
+# sleep just costs nothing. stderr is dropped so only JSON-RPC is parsed.
 log "Smoke test: MCP handshake + tool inventory"
-smoke="$(printf '%s\n' \
+smoke="$({ printf '%s\n' \
   '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"setup","version":"1"}}}' \
   '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
   '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
   '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"list_sources","arguments":{}}}' \
-  '{"jsonrpc":"2.0","id":4,"method":"tools/list"}' \
-  | "$VIRTUAL_ENV/bin/paper-mcp")"
+  '{"jsonrpc":"2.0","id":4,"method":"tools/list"}'; sleep 90; } \
+  | "$VIRTUAL_ENV/bin/paper-mcp" 2>/dev/null)"
 
-smoke_summary="$(printf '%s' "$smoke" | "$VIRTUAL_ENV/bin/python" -c '
+smoke_summary="$(printf '%s\n' "$smoke" | "$VIRTUAL_ENV/bin/python" -c '
 import json, sys
 
 meta_tools, mounted_tools, sources = [], [], []
@@ -142,10 +146,10 @@ for line in sys.stdin:
     tools = result.get("tools")
     if tools:
         names = [t["name"] for t in tools]
-        if len(names) >= len(mounted_tools):
-            mounted_tools = names
         if msg.get("id") == 2:
             meta_tools = names
+        if len(names) > len(mounted_tools):
+            mounted_tools = names
     if msg.get("id") == 3:
         text = "".join(c.get("text", "") for c in result.get("content") or [])
         try:
@@ -153,13 +157,15 @@ for line in sys.stdin:
         except ValueError:
             sources = []
 
-print(len(meta_tools), len(mounted_tools))
+print(len(meta_tools))
+print(len(mounted_tools))
 for s in sources:
     print("%s\t%s\t%d" % (s.get("backend"), s.get("status"), len(s.get("tools") or [])))
 ')"
 
 meta_count="$(printf '%s\n' "$smoke_summary" | sed -n 1p)"
 total_count="$(printf '%s\n' "$smoke_summary" | sed -n 2p)"
+backend_table="$(printf '%s\n' "$smoke_summary" | sed 1,2d)"
 
 if [ "${meta_count:-0}" -eq 0 ]; then
   die "handshake failed: the gateway returned no tools"
@@ -170,15 +176,23 @@ printf '\033[1;32m  v handshake OK — %s smart tools always mounted\033[0m\n' "
 if [ "${total_count:-0}" -gt "$meta_count" ]; then
   printf '\033[1;32m  v namespace mount OK — %s upstream tools exposed\033[0m\n' \
     "$((total_count - meta_count))"
+elif [ -n "$backend_table" ] && [ "$(printf '%s\n' "$backend_table" | awk -F'\t' '{s+=$3} END{print s+0}')" -gt 0 ]; then
+  # The final tools/list can race the lazy backend spawns, so fall back to the
+  # per-backend counts reported by list_sources() itself.
+  printf '\033[1;32m  v namespace mount OK — %s upstream tools reported by list_sources()\033[0m\n' \
+    "$(printf '%s\n' "$backend_table" | awk -F'\t' '{s+=$3} END{print s}')"
 else
   warn "no upstream tools mounted — every backend failed to start"
 fi
 
-printf '\n  %-24s %-14s %s\n' BACKEND STATUS TOOLS
-printf '%s\n' "$smoke_summary" | sed 3d | awk -F'\t' '{ printf "  %-24s %-14s %s\n", $1, $2, $3 }'
-
-if printf '%s\n' "$smoke_summary" | sed 3d | grep -q 'unavailable'; then
-  warn "some backends are unavailable — see the table above (network or missing system tool)"
+if [ -n "$backend_table" ]; then
+  printf '\n  %-26s %-14s %s\n' BACKEND STATUS TOOLS
+  printf '%s\n' "$backend_table" | awk -F'\t' '{ printf "  %-26s %-14s %s\n", $1, $2, $3 }'
+  if printf '%s\n' "$backend_table" | grep -q 'unavailable'; then
+    warn "some backends are unavailable — see the table above (network or missing system tool)"
+  fi
+else
+  warn "list_sources() returned no backends — run it manually to see why"
 fi
 
 cat <<EOF

@@ -524,6 +524,24 @@ def build_argparser() -> argparse.ArgumentParser:
     return p
 
 
+def _quiet_stdio_loggers() -> None:
+    """Keep stdio clean: route every library logger to stderr.
+
+    On stdio transport, stdout *is* the JSON-RPC channel, so a single line of
+    INFO output from FastMCP's own logger corrupts the stream for the client.
+    ``logging.basicConfig`` only configures the root logger, and FastMCP adds
+    its handler at import time, so re-target the whole hierarchy explicitly.
+    """
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s")
+    )
+    for name in ("mcp", "mcp.server", "mcp.server.fastmcp", "unified-mcp", ""):
+        logger = logging.getLogger(name)
+        logger.handlers = [handler] if name else [handler]
+        logger.propagate = False
+
+
 def main(argv: Optional[List[str]] = None) -> None:
     args = build_argparser().parse_args(argv)
     logging.basicConfig(
@@ -531,6 +549,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         stream=sys.stderr,
         format="%(asctime)s %(name)s %(levelname)s %(message)s",
     )
+    _quiet_stdio_loggers()
     if args.http:
         mcp.settings.host = args.host
         mcp.settings.port = args.port
