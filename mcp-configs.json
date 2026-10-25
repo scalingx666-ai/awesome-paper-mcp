@@ -1,0 +1,139 @@
+{
+  "_README": "MCP client configs for the unified paper-mcp server. Replace the absolute paths with your own checkout. Each block is ready to paste into the named client's config file.",
+  "_gateway": {
+    "command": "/path/to/awesome-paper-mcp/.venv/bin/python",
+    "args": ["-m", "unified_mcp"],
+    "cwd": "/path/to/awesome-paper-mcp"
+  },
+
+  "claude_code": {
+    "_file": "~/.claude.json (project mcpServers) or .mcp.json in the project root",
+    "_docs": "https://docs.claude.com/en/docs/claude-code/mcp",
+    "mcpServers": {
+      "paper-mcp": {
+        "command": "/path/to/awesome-paper-mcp/.venv/bin/python",
+        "args": ["-m", "unified_mcp"],
+        "cwd": "/path/to/awesome-paper-mcp",
+        "env": {
+          "SEMANTIC_SCHOLAR_API_KEY": "",
+          "PAPER_SEARCH_MCP_UNPAYWALL_EMAIL": ""
+        }
+      }
+    }
+  },
+
+  "claude_desktop": {
+    "_file": "~/Library/Application Support/Claude/claude_desktop_config.json",
+    "_docs": "https://modelcontextprotocol.io/quickstart/user",
+    "mcpServers": {
+      "paper-mcp": {
+        "command": "/path/to/awesome-paper-mcp/.venv/bin/python",
+        "args": ["-m", "unified_mcp"],
+        "cwd": "/path/to/awesome-paper-mcp"
+      }
+    }
+  },
+
+  "cursor": {
+    "_file": "~/.cursor/mcp.json",
+    "_docs": "https://docs.cursor.com/context/model-context-protocol",
+    "mcpServers": {
+      "paper-mcp": {
+        "command": "/path/to/awesome-paper-mcp/.venv/bin/python",
+        "args": ["-m", "unified_mcp"],
+        "cwd": "/path/to/awesome-paper-mcp"
+      }
+    }
+  },
+
+  "minimax_code": {
+    "_file": "~/.minimax/mcp.json (global) or <project>/.mcp.json (project)",
+    "_docs": "MiniMax Code MCP settings",
+    "mcpServers": {
+      "paper-mcp": {
+        "command": "/path/to/awesome-paper-mcp/.venv/bin/python",
+        "args": ["-m", "unified_mcp"],
+        "cwd": "/path/to/awesome-paper-mcp"
+      }
+    }
+  },
+
+  "gemini_cli": {
+    "_file": "~/.gemini/settings.json",
+    "_docs": "https://google-gemini.github.io/gemini-cli/docs/tools/mcp-server.html",
+    "mcpServers": {
+      "paper-mcp": {
+        "command": "/path/to/awesome-paper-mcp/.venv/bin/python",
+        "args": ["-m", "unified_mcp"],
+        "cwd": "/path/to/awesome-paper-mcp"
+      }
+    }
+  },
+
+  "cline": {
+    "_file": "VS Code settings.json -> cline.mcpServers",
+    "_docs": "https://docs.cline.bot/mcp/configuring-mcp-servers",
+    "mcpServers": {
+      "paper-mcp": {
+        "command": "/path/to/awesome-paper-mcp/.venv/bin/python",
+        "args": ["-m", "unified_mcp"],
+        "cwd": "/path/to/awesome-paper-mcp",
+        "disabled": false,
+        "autoApprove": []
+      }
+    }
+  },
+
+  "windsurf": {
+    "_file": "~/.codeium/windsurf/mcp_config.json",
+    "_docs": "https://docs.windsurf.com/windsurf/cascade/mcp",
+    "mcpServers": {
+      "paper-mcp": {
+        "command": "/path/to/awesome-paper-mcp/.venv/bin/python",
+        "args": ["-m", "unified_mcp"],
+        "cwd": "/path/to/awesome-paper-mcp"
+      }
+    }
+  },
+
+  "zed": {
+    "_file": "~/.config/zed/settings.json -> context_servers",
+    "_docs": "https://zed.dev/docs/assistant/context-servers",
+    "context_servers": {
+      "paper-mcp": {
+        "command": {
+          "path": "/path/to/awesome-paper-mcp/.venv/bin/python",
+          "args": ["-m", "unified_mcp"],
+          "cwd": "/path/to/awesome-paper-mcp"
+        }
+      }
+    }
+  },
+
+  "opencode": {
+    "_file": "opencode.json -> mcp",
+    "_docs": "https://opencode.ai/docs/mcp-servers/",
+    "mcp": {
+      "paper-mcp": {
+        "type": "local",
+        "command": [
+          "/path/to/awesome-paper-mcp/.venv/bin/python",
+          "-m",
+          "unified_mcp"
+        ],
+        "cwd": "/path/to/awesome-paper-mcp",
+        "enabled": true
+      }
+    }
+  },
+
+  "http_transport": {
+    "_note": "Run: .venv/bin/python -m unified_mcp --http --host 127.0.0.1 --port 8765",
+    "mcpServers": {
+      "paper-mcp": {
+        "type": "http",
+        "url": "http://127.0.0.1:8765/mcp"
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+# virtualenv + installed interpreter state
+.venv/
+
+# upstream repos fetched by scripts/setup.sh (third-party code, own licenses)
+sources/
+
+# node
+node_modules/
+package-lock.json.bak
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# os
+.DS_Store
+Thumbs.db
+
+# local verification sandbox (a copy of this repo used to test scripts/setup.sh)
+.tmp-cleanroom/
