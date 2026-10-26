@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from mcp.server.fastmcp import FastMCP
 
 from .backends import ALL_BACKENDS, Backend, BackendProxy, get
+from .dedupe import merge_payloads
 
 log = logging.getLogger("unified-mcp")
 
@@ -31,9 +32,10 @@ mcp = FastMCP(
         "Unified academic paper search across arXiv, Semantic Scholar, Google Scholar, "
         "OpenReview, OpenAlex, DBLP, PubMed, bioRxiv, medRxiv, Crossref, CORE, HAL and 30+ "
         "more sources. Prefer the unprefixed cross-source tools (search_papers, get_paper, "
-        "get_paper_text) for simple requests; use <backend>__<tool> when you need a "
-        "specific source's full-text, review or export features. Call list_sources() to "
-        "see every backend and its capabilities."
+        "get_paper_text) for simple requests; search_papers merges duplicate papers across "
+        "backends into one entry with a unified `sources` list. Use <backend>__<tool> when "
+        "you need a specific source's full-text, review or export features. Call "
+        "list_sources() to see every backend and its capabilities."
     ),
 )
 
@@ -135,6 +137,11 @@ async def search_papers(
     (Semantic Scholar / Crossref / OpenAlex / DBLP / PubMed ...), resp and
     google_scholar.
 
+    Results from every source are merged and de-duplicated before being
+    returned in ``papers``: the same arXiv id, DOI, or title/first-author pair
+    collapses into one entry whose ``sources`` list names every backend that
+    returned it. Raw per-source payloads stay in ``results`` for inspection.
+
     Args:
         query: Keywords or a paper title.
         sources: Backend names from list_sources(). Omit for the default set.
@@ -171,24 +178,18 @@ async def search_papers(
             return name, {"error": str(exc)}
 
     results = await asyncio.gather(*(run(*j) for j in jobs))
-    out: Dict[str, Any] = {"query": query, "results": {}, "total": 0}
-    for name, data in results:
-        count = _count_results(data)
-        out["results"][name] = data
-        out["total"] += count
+    merged = merge_payloads(results)
+    out: Dict[str, Any] = {
+        "query": query,
+        "results": {name: data for name, data in results},
+        "papers": [paper.to_dict() for paper in merged.papers],
+        "total": len(merged.papers),
+        "raw_total": merged.raw_total,
+        "duplicates_removed": merged.duplicates_removed,
+    }
+    if merged.reasons:
+        out["dedupe_reasons"] = merged.reasons
     return out
-
-
-def _count_results(data: Any) -> int:
-    if isinstance(data, list):
-        return len(data)
-    if isinstance(data, dict):
-        for key in ("papers", "results", "data", "items"):
-            if isinstance(data.get(key), list):
-                return len(data[key])
-        if data.get("error"):
-            return 0
-    return 0
 
 
 @mcp.tool()
